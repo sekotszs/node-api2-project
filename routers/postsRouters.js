@@ -20,7 +20,40 @@ router.post("/", (res, req) => {
   }
 });
 
-router.post("/:id/comments", (req, res) => {});
+router.post("/:id/comments", (req, res) => {
+  const comment = req.body;
+  comment.post_id = Number(req.params.id);
+  if (!comment.text) {
+    res
+      .status(400)
+      .json({ errorMessage: "Please provide text for the comment." });
+  } else {
+    db.findById(Number(req.params.id))
+      .then((result) => {
+        if (result !== 0) {
+          db.insertComment(comment)
+            .then((commentResult) => {
+              comment.id = commentResult.id;
+              res.status(201).json(comment);
+            })
+            .catch((err) => {
+              res
+                .status(500)
+                .json({
+                  error:
+                    "There was an error while saving the comment to the database",
+                });
+            });
+        } else {
+          res
+            .status(404)
+            .json({
+              message: "The post with the specified ID does not exist.",
+            });
+        }
+      })
+  }
+});
 
 router.get("/", (req, res) => {
   db.find()
@@ -46,7 +79,21 @@ router.get("/:id", (req, res) => {
     });
 });
 
-router.get("/:id/comments", (req, res) => {});
+router.get("/:id/comments", (req, res) => {
+  db.findById(Number(req.params.id)).then((result) => {
+    if (result.length !== 0) {
+      db.findPostComments(req.params.id)
+        .then((commentResult) => {
+          res.status(200).json(commentResult);
+        })
+        .catch((error) => {
+          res.status(500).json({ message: "There was an error" });
+        });
+    } else {
+      res.status(404).json({ message: "Not found" });
+    }
+  });
+});
 
 router.delete("/:id", (req, res) => {
   db.remove(req.params.id)
